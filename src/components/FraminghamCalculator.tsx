@@ -25,37 +25,46 @@ export default function FraminghamCalculator() {
     // Framingham 2008 General CVD 10-year risk
     const isMale = formData.gender === 'male';
     const age = Number(formData.age);
-    // Convert mmol/L to mg/dL for standard Framingham formula
-    const tc = Number(formData.tc) * 38.67;
-    const hdl = Number(formData.hdl) * 38.67;
+    const tc = Number(formData.tc) / 0.0259; // Convert mmol/L to mg/dL
+    const hdl = Number(formData.hdl) / 0.0259; // Convert mmol/L to mg/dL
     const sbp = Number(formData.sbp);
-    const treated = formData.bpMeds === 'yes';
-    const smoker = formData.smoker === 'yes';
-    const diabetes = formData.diabetes === 'yes';
+    const treated = formData.bpMeds === 'yes' ? 1 : 0;
+    const untreated = formData.bpMeds === 'no' ? 1 : 0;
+    const smoker = formData.smoker === 'yes' ? 1 : 0;
+    const diabetes = formData.diabetes === 'yes' ? 1 : 0;
+
+    const lnAge = Math.log(age);
+    const lnTc = Math.log(tc);
+    const lnHdl = Math.log(hdl);
+    const lnSbp = Math.log(sbp);
 
     let sum = 0;
-    let risk = 0;
+    let meanScore = 0;
+    let s0 = 0;
 
     if (isMale) {
-      sum = Math.log(age) * 3.06117 +
-            Math.log(tc) * 1.12370 -
-            Math.log(hdl) * 0.93263 +
-            Math.log(sbp) * (treated ? 1.99881 : 1.93303) +
-            (smoker ? 0.65451 : 0) +
-            (diabetes ? 0.57367 : 0) -
-            23.9802;
-      risk = 100 * (1 - Math.pow(0.88936, Math.exp(sum)));
+      sum = (3.06117 * lnAge) +
+            (1.12370 * lnTc) +
+            (-0.93263 * lnHdl) +
+            (1.93303 * lnSbp * untreated) +
+            (1.99881 * lnSbp * treated) +
+            (0.65451 * smoker) +
+            (0.57367 * diabetes);
+      meanScore = 23.9802;
+      s0 = 0.88936;
     } else {
-      sum = Math.log(age) * 2.32888 +
-            Math.log(tc) * 1.20904 -
-            Math.log(hdl) * 0.70833 +
-            Math.log(sbp) * (treated ? 2.82263 : 2.76157) +
-            (smoker ? 0.52873 : 0) +
-            (diabetes ? 0.69154 : 0) -
-            26.1931;
-      risk = 100 * (1 - Math.pow(0.95012, Math.exp(sum)));
+      sum = (2.32888 * lnAge) +
+            (1.20904 * lnTc) +
+            (-0.70833 * lnHdl) +
+            (2.76157 * lnSbp * untreated) +
+            (2.82263 * lnSbp * treated) +
+            (0.52873 * smoker) +
+            (0.69154 * diabetes);
+      meanScore = 26.1931;
+      s0 = 0.95012;
     }
 
+    const risk = 100 * (1 - Math.pow(s0, Math.exp(sum - meanScore)));
     setResult(Number(Math.max(0, Math.min(risk, 99.9)).toFixed(1)));
   };
 

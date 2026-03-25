@@ -10,7 +10,6 @@ export default function ChinaParCalculator() {
     tc: '',
     hdl: '',
     sbp: '',
-    dbp: '',
     bpMeds: 'no',
     diabetes: 'no',
     smoker: 'no',
@@ -30,17 +29,12 @@ export default function ChinaParCalculator() {
     
     const ageInput = Number(formData.age);
     const sbpInput = Number(formData.sbp);
-    const dbpInput = Number(formData.dbp);
     
-    // 临床上为了将舒张压(DBP)的风险纳入仅以收缩压(SBP)为主要连续变量的模型中，
-    // 常用的等效转换是：如果舒张压过高，则提升等效收缩压 (例如 SBP = max(SBP, DBP + 40))
-    const effectiveSbp = Math.max(sbpInput, dbpInput + 40);
-
     // 核心 10 年风险计算函数
     const calc10YearRisk = (calcAge: number) => {
       const isMale = formData.gender === 'male';
-      const tc = Number(formData.tc) * 38.67; // mmol/L to mg/dL
-      const hdl = Number(formData.hdl) * 38.67;
+      const tc = Number(formData.tc) / 0.0259; // mmol/L to mg/dL
+      const hdl = Number(formData.hdl) / 0.0259; // mmol/L to mg/dL
       const treated = formData.bpMeds === 'yes' ? 1 : 0;
       const untreated = formData.bpMeds === 'no' ? 1 : 0;
       const smoker = formData.smoker === 'yes' ? 1 : 0;
@@ -50,48 +44,50 @@ export default function ChinaParCalculator() {
       const urban = formData.urbanization === 'urban' ? 1 : 0;
       const familyHist = formData.familyHistory === 'yes' ? 1 : 0;
 
+      const lnAge = Math.log(calcAge);
+      const lnSbp = Math.log(sbpInput);
+      const lnTc = Math.log(tc);
+      const lnHdl = Math.log(hdl);
+      const lnWaist = Math.log(waist);
+
       let sum = 0;
       let meanXB = 0;
       let s0 = 0;
 
       if (isMale) {
-        sum = (0.0497 * calcAge) +
-              (0.0216 * effectiveSbp * untreated) +
-              (0.0243 * effectiveSbp * treated) +
-              (0.0233 * tc) +
-              (-0.0443 * hdl) +
-              (0.4071 * smoker) +
-              (0.5103 * diabetes) +
-              (0.0154 * waist) +
-              (0.3522 * north) +
-              (-0.1533 * urban) +
-              (0.3475 * familyHist) +
-              (-0.0002 * calcAge * effectiveSbp * untreated) +
-              (-0.0002 * calcAge * effectiveSbp * treated) +
-              (-0.0048 * calcAge * smoker) +
-              (-0.0036 * calcAge * familyHist);
+        sum = (31.97 * lnAge) +
+              (27.39 * lnSbp * treated) +
+              (26.15 * lnSbp * untreated) +
+              (0.62 * lnTc) +
+              (-0.69 * lnHdl) +
+              (-0.71 * lnWaist) +
+              (3.96 * smoker) +
+              (0.36 * diabetes) +
+              (0.48 * north) +
+              (-0.16 * urban) +
+              (6.22 * familyHist) +
+              (-6.02 * lnAge * lnSbp * treated) +
+              (-5.73 * lnAge * lnSbp * untreated) +
+              (-0.94 * lnAge * smoker) +
+              (-1.53 * lnAge * familyHist);
         
-        meanXB = 4.5441;
-        s0 = 0.9798;
+        meanXB = 140.68;
+        s0 = 0.9707;
       } else {
-        sum = (0.0602 * calcAge) +
-              (0.0253 * effectiveSbp * untreated) +
-              (0.0268 * effectiveSbp * treated) +
-              (0.0284 * tc) +
-              (-0.0545 * hdl) +
-              (0.6137 * smoker) +
-              (0.7380 * diabetes) +
-              (0.0140 * waist) +
-              (0.2450 * north) +
-              (-0.0940 * urban) +
-              (0.4330 * familyHist) +
-              (-0.0003 * calcAge * effectiveSbp * untreated) +
-              (-0.0003 * calcAge * effectiveSbp * treated) +
-              (-0.0072 * calcAge * smoker) +
-              (-0.0052 * calcAge * familyHist);
+        sum = (24.87 * lnAge) +
+              (20.71 * lnSbp * treated) +
+              (19.98 * lnSbp * untreated) +
+              (0.06 * lnTc) +
+              (-0.22 * lnHdl) +
+              (1.48 * lnWaist) +
+              (0.49 * smoker) +
+              (0.57 * diabetes) +
+              (0.54 * north) +
+              (-4.53 * lnAge * lnSbp * treated) +
+              (-4.36 * lnAge * lnSbp * untreated);
               
-        meanXB = 4.9249;
-        s0 = 0.9903;
+        meanXB = 117.26;
+        s0 = 0.99;
       }
 
       return 100 * (1 - Math.pow(s0, Math.exp(sum - meanXB)));
@@ -158,15 +154,8 @@ export default function ChinaParCalculator() {
               <input type="number" name="waist" min="50" max="150" step="0.1" value={formData.waist} onChange={handleChange} placeholder="例如: 85" className="w-full rounded-lg border-slate-300 border p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" required />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-2">当前血压水平 (mmHg)</label>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <input type="number" name="sbp" min="70" max="200" value={formData.sbp} onChange={handleChange} placeholder="收缩压 (如: 120)" className="w-full rounded-lg border-slate-300 border p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" required />
-                </div>
-                <div>
-                  <input type="number" name="dbp" min="40" max="140" value={formData.dbp} onChange={handleChange} placeholder="舒张压 (如: 80)" className="w-full rounded-lg border-slate-300 border p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" required />
-                </div>
-              </div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">收缩压 (mmHg)</label>
+              <input type="number" name="sbp" min="70" max="200" value={formData.sbp} onChange={handleChange} placeholder="例如: 120" className="w-full rounded-lg border-slate-300 border p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" required />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">总胆固醇 TC (mmol/L)</label>
