@@ -1,0 +1,5 @@
+{
+  "name": "心血管风险评估工具",
+  "description": "湖南省人民医院 / 湖南省心血管病防治技术牵头单位提供的心血管风险评估工具，包含中国 ASCVD (China-PAR) 和 Framingham 风险评分。",
+  "requestFramePermissions": []
+}
