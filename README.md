@@ -1,12 +1,6 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# 心血管风险计算公式
 
-# Run and deploy your AI Studio app
-
-This contains everything you need to run your app locally.
-
-View your app in AI Studio: https://ai.studio/apps/14f560f1-4560-46cb-9398-4878c4c6d024
+心血管风险计算公式心脏风险计算工具是一种用于评估个体未来10年发生心血管事件（如冠心病、中风等）风险的工具
 
 ## Run Locally
 
